@@ -1,6 +1,6 @@
 # pstack
 
-Agent-driven development with a learning loop. 4 agents, 8 skills, zero dependencies.
+Agent-driven development with a learning loop. 4 agents, 10 skills, zero dependencies.
 
 ## What It Does
 
@@ -40,6 +40,8 @@ cd ~/.claude/skills/pstack && ./setup
 | `/ps-compound` | Extract learnings from solved problems |
 | `/ps-learn` | Search and manage learnings |
 | `/ps-retro` | Weekly retrospective + prune stale learnings |
+| `/ps-careful` | Confirmation gates for destructive commands on prod/shared code |
+| `/ps-freeze` | Lock editing scope to specific paths for the session |
 
 ## Commands (Shortcuts)
 
@@ -131,4 +133,4 @@ cd ~/.claude/skills/pstack && ./setup --uninstall
 
 See [PHILOSOPHY.md](PHILOSOPHY.md).
 
-**In one sentence**: gstack gives you a fixed team. pstack lets you coach yours.
+**In one sentence**: pstack lets you coach your own team.
