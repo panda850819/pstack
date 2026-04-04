@@ -48,6 +48,7 @@ learnings: docs/learnings
 
 ```bash
 mkdir -p docs/learnings/{patterns,pitfalls,architecture,preferences}
+mkdir -p docs/checkpoints
 ```
 
 ## Step 5: Confirm
