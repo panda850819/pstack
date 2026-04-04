@@ -44,9 +44,24 @@ If a brief exists for this branch (check `docs/briefs/` for a matching slug or d
 
 If no brief exists, skip this step silently.
 
-## Step 4: Parallel Review
+## Step 4: Detect Diff Scope
 
-Launch 3 review passes in parallel using `context: fork` (isolated subagents — results flow back, intermediate work stays out of main context). Each reviews the same diff with a different lens:
+Scan the diff file list to detect which conditional passes to activate:
+
+```
+SCOPE_MIGRATION  — files matching **/migrations/**, **/migrate*, **/*.sql with CREATE/ALTER/DROP
+SCOPE_API        — files matching **/routes/**, **/controllers/**, **/api/**, **/handlers/**
+SCOPE_AUTH       — files matching **/auth/**, **/middleware/**, or diff containing token/session/password/permission
+SCOPE_INFRA      — files matching **/docker*, **/.github/**, **/terraform/**, **/k8s/**
+```
+
+Log detected scopes: "Scope signals: {list}" (or "none" if only base code changes).
+
+## Step 5: Parallel Review
+
+Launch review passes in parallel using `context: fork` (isolated subagents — results flow back, intermediate work stays out of main context). Each reviews the same diff with a different lens.
+
+**Always-on passes (run every time):**
 
 **Pass 1 — Correctness** (eng agent lens):
 - Bugs that pass CI but break production
@@ -66,6 +81,32 @@ Launch 3 review passes in parallel using `context: fork` (isolated subagents —
 - API surface changes that break consumers
 - Missing migrations or backwards-incompatible changes
 
+**Conditional passes (only when scope detected):**
+
+**Pass 4 — Migration Safety** (only if SCOPE_MIGRATION):
+- Backwards-incompatible schema changes without migration path
+- Missing rollback strategy (no down migration)
+- Data loss risk (column drops, type changes on populated tables)
+- Lock duration on large tables (ALTER on millions of rows)
+
+**Pass 5 — API Contract** (only if SCOPE_API):
+- Breaking changes to existing endpoints (removed fields, changed types)
+- Missing versioning for breaking changes
+- Inconsistent error response format
+- Missing or wrong HTTP status codes
+
+**Pass 6 — Auth/Permissions** (only if SCOPE_AUTH):
+- Privilege escalation paths (user can access admin resources)
+- Missing auth checks on new endpoints
+- Token/session handling flaws (no expiry, no rotation)
+- Secrets logged or exposed in error messages
+
+**Pass 7 — Infra/CI** (only if SCOPE_INFRA):
+- Secrets hardcoded in config files
+- Missing environment variable validation
+- Docker image using latest tag instead of pinned version
+- CI steps that can silently fail
+
 Each pass outputs findings in the same format:
 ```
 [P0-P3] (confidence: N/10) file:line — description
@@ -73,14 +114,14 @@ Each pass outputs findings in the same format:
   Action: AUTO-FIX | ASK
 ```
 
-Merge all findings, deduplicate, sort by priority.
+Merge all findings, deduplicate, sort by priority. If multiple passes flag the same file:line, boost confidence and mark "MULTI-PASS CONFIRMED".
 
 **AUTO-FIX**: mechanical fixes (typos, missing null checks, obvious bugs). Apply directly.
 **ASK**: judgment calls (architecture, design trade-offs). Batch all ASK items into one AskUserQuestion.
 
 If no issues found across all passes: "Review clean. No issues found."
 
-## Step 5: Write Learnings
+## Step 6: Write Learnings
 
 After review completes, evaluate whether any non-obvious pattern was discovered.
 

@@ -28,10 +28,21 @@ If any match, do a quick sanity check against the diff before proceeding.
 
 If a brief exists for this branch (check `docs/briefs/`):
 1. Read the brief's **Scope > In/Out** sections.
-2. Compare against `git diff origin/{main} --stat`.
-3. If changes exist outside the stated scope, warn the user and ask to confirm before proceeding.
+2. Get the **current** full diff: `git diff origin/{main} --stat`.
+3. Compare against the brief scope. Flag any files or features outside stated scope.
+4. Also compare against the diff at review time (if `/ps-review` was run earlier, the reviewed diff may be smaller than the current diff). Check for **post-review additions**: files changed after the last review that were never reviewed.
+5. Output:
+   - "Scope: ON TRACK" if all changes match the brief and nothing was added post-review.
+   - "SCOPE DRIFT: [description]" for each out-of-scope change.
+   - "POST-REVIEW CHANGES: [files]" for any files modified after the last review.
+   Ask user to confirm before proceeding if either is detected.
 
-If no brief exists, skip silently.
+If no brief exists, still check for post-review additions:
+1. Run `git log --oneline --since="1 hour ago"` to see recent commits.
+2. If there are commits after the last `/ps-review` in this session, list the changed files and warn:
+   "These files were changed after the last review: [list]. Proceed without re-review?"
+
+If neither brief nor review history exists, skip silently.
 
 ## Step 4: Review Gate
 
